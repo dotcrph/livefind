@@ -1,7 +1,5 @@
 #include "main.hpp"
 
-#include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <iostream>
