@@ -6,7 +6,6 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
-#include <ostream>
 #include <vector>
 
 #include "flags.hpp"
