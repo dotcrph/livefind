@@ -1,0 +1,45 @@
+#pragma once
+
+#include <string>
+#include <vector>
+
+#include <ncurses.h>
+#include <menu.h>
+#include <form.h>
+
+// void init();
+// void exit_cleanup();
+//
+// bool try_fill_res_itms();
+//
+// void print_w_title(WINDOW* &win, const std::string &msg);
+
+namespace log {
+    void error(const char *msg, ...);
+    void warning(const char *msg, ...);
+    void verbose(const char *msg, ...);
+    void print_help();
+}
+
+namespace utils {
+    bool try_push_dir(const std::string &dir, 
+                       std::vector<std::string> *target_vec);
+    void trim_whitespace(std::string &str);
+    bool quick_write_file(const std::string &msg);
+}
+
+namespace conversions {
+    int str_to_int(const std::string &in);
+}
+
+namespace tui {
+    namespace components {
+        void draw_border(WINDOW *window_ptr, const std::string &title);
+        void destroy_window(WINDOW *window_ptr);
+
+        MENU *create_menu(WINDOW *parent_win, ITEM **items);
+        void destroy_menu(MENU *menu_ptr);
+        FORM *create_form(WINDOW *parent_win, FIELD **fields);
+        void destroy_form(FORM *form_ptr);
+    }
+}
