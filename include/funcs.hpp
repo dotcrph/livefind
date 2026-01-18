@@ -39,6 +39,7 @@ namespace tui {
 
         MENU *create_menu(WINDOW *parent_win, ITEM **items);
         void destroy_menu(MENU *menu_ptr);
+
         FORM *create_form(WINDOW *parent_win, FIELD **fields);
         void destroy_form(FORM *form_ptr);
     }
