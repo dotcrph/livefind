@@ -34,13 +34,16 @@ namespace conversions {
 
 namespace tui {
     namespace components {
-        void draw_border(WINDOW *window_ptr, const std::string &title);
+        void draw_border(WINDOW *window_ptr, const std::string &title = "");
+        WINDOW *create_derwin(WINDOW *parent_win, 
+                int offset_h, int offset_w, 
+                int offset_y, int offset_x);
         void destroy_window(WINDOW *window_ptr);
 
-        MENU *create_menu(WINDOW *parent_win, ITEM **items);
+        MENU *create_menu(WINDOW *parent_win, WINDOW *sub_win, ITEM **items);
         void destroy_menu(MENU *menu_ptr);
 
-        FORM *create_form(WINDOW *parent_win, FIELD **fields);
+        FORM *create_form(WINDOW *parent_win, WINDOW *sub_win, FIELD **fields);
         void destroy_form(FORM *form_ptr);
     }
 }

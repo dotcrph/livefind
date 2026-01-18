@@ -19,11 +19,9 @@ template <typename T>
 using Uptr = std::unique_ptr<T>;
 
 auto paths = std::make_unique<std::vector<std::string>>();
-std::string out_path{};
 
 int main(int argc, char *argv[]) 
 {
-
     if (argc == 2 && (!strcmp(argv[1], "-h") 
                        || !strcmp(argv[1], "--help"))) {
         log::print_help();
@@ -34,9 +32,10 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    tui::run();
+    std::string path = tui::run();
 
-    if (!utils::quick_write_file(out_path)) {
+    // The order of operations below is correct
+    if (!utils::quick_write_file(path) || path.empty()) {
         return EXIT_FAILURE;
     }
 

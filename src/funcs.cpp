@@ -183,6 +183,20 @@ namespace tui {
             }
         }
 
+        WINDOW *create_derwin(WINDOW *parent_win, 
+                int offset_h, int offset_w, 
+                int offset_y, int offset_x)
+        {
+            int parent_h, parent_w;
+            getmaxyx(parent_win, parent_h, parent_w);
+
+            return derwin(
+                parent_win, 
+                parent_h - offset_h, parent_w - offset_w, 
+                offset_y, offset_x
+            );
+        }
+
         void destroy_window(WINDOW *window_ptr)
         {
             wborder(window_ptr, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
@@ -190,7 +204,7 @@ namespace tui {
             delwin(window_ptr);
         }
 
-        MENU *create_menu(WINDOW *parent_win, ITEM **items)
+        MENU *create_menu(WINDOW *parent_win, WINDOW *sub_win, ITEM **items)
         {
             MENU *menu_ptr = new_menu(items);
 
@@ -198,16 +212,12 @@ namespace tui {
             getmaxyx(parent_win, parent_h, parent_w);
 
             set_menu_win(menu_ptr, parent_win);
-            set_menu_sub(menu_ptr, derwin(
-                parent_win, 
-                parent_h - 2, parent_w - 2, 
-                1, 1
-            ));
+            set_menu_sub(menu_ptr, sub_win);
             set_menu_format(menu_ptr, parent_h-2, 1);
             set_menu_mark(menu_ptr, " > ");
 
             post_menu(menu_ptr);
-            wrefresh(parent_win);
+            // wrefresh(sub_win);
             return menu_ptr;
         }
 
@@ -217,7 +227,7 @@ namespace tui {
             free_menu(menu_ptr);
         }
 
-        FORM *create_form(WINDOW *parent_win, FIELD **fields)
+        FORM *create_form(WINDOW *parent_win, WINDOW *sub_win, FIELD **fields)
         {
             FORM *form_ptr = new_form(fields);
 
@@ -225,14 +235,10 @@ namespace tui {
             getmaxyx(parent_win, parent_h, parent_w);
 
             set_form_win(form_ptr, parent_win);
-            set_form_sub(form_ptr, derwin(
-                parent_win, 
-                parent_h - 2, parent_w - 2, 
-                1, 1
-            ));
+            set_form_sub(form_ptr, sub_win);
 
             post_form(form_ptr);
-            wrefresh(parent_win);
+            // wrefresh(sub_win);
             return form_ptr;
         }
 
