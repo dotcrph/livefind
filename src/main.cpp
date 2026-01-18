@@ -17,12 +17,16 @@ namespace fs = std::filesystem;
 template <typename T>
 using Uptr = std::unique_ptr<T>;
 
+bool try_parse_args(int &argc, char **(&argv));
+bool try_add_root_dir(const std::string &path, const bool canIgnore = false);
+bool try_iterate_dirs(const std::filesystem::path &path);
+
 auto paths = std::make_unique<std::vector<std::string>>();
 
 int main(int argc, char *argv[])
 {
     if (argc == 2 && (!strcmp(argv[1], "-h") 
-                       || !strcmp(argv[1], "--help"))) {
+                      || !strcmp(argv[1], "--help"))) {
         log::print_help();
         return EXIT_FAILURE;
     }

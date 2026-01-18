@@ -164,91 +164,87 @@ namespace conversions {
     }
 }
 
-namespace tui {
-    namespace components {
-        void draw_border(WINDOW *window_ptr, const std::string &title)
-        {
-            static constexpr short TITLE_X_OFFSET = 2;
+namespace tui::components {
+    void draw_border(WINDOW *window_ptr, const std::string &title)
+    {
+        static constexpr short TITLE_X_OFFSET = 2;
 
-            box(window_ptr, 0, 0);
+        box(window_ptr, 0, 0);
 
-            if (!title.empty()) {
-                wattron(window_ptr, A_REVERSE);
+        if (!title.empty()) {
+            wattron(window_ptr, A_REVERSE);
 
-                mvwaddch(window_ptr, 0, TITLE_X_OFFSET, ' ');
-                mvwprintw(window_ptr, 0, TITLE_X_OFFSET + 1, 
-                          "%s", title.c_str());
-                mvwaddch(window_ptr, 0, TITLE_X_OFFSET + title.length() + 1, 
-                         ' ');
+            mvwaddch(window_ptr, 0, TITLE_X_OFFSET, ' ');
+            mvwprintw(window_ptr, 0, TITLE_X_OFFSET + 1, 
+                      "%s", title.c_str());
+            mvwaddch(window_ptr, 0, TITLE_X_OFFSET + title.length() + 1, 
+                     ' ');
 
-                wattroff(window_ptr, A_REVERSE);
-            }
+            wattroff(window_ptr, A_REVERSE);
         }
+    }
 
-        WINDOW *create_derwin(WINDOW *parent_win, 
-                int offset_h, int offset_w, 
-                int offset_y, int offset_x)
-        {
-            int parent_h, parent_w;
-            getmaxyx(parent_win, parent_h, parent_w);
+    WINDOW *create_derwin(WINDOW *parent_win, 
+            int offset_h, int offset_w, 
+            int offset_y, int offset_x)
+    {
+        int parent_h, parent_w;
+        getmaxyx(parent_win, parent_h, parent_w);
 
-            return derwin(
-                parent_win, 
-                parent_h - offset_h, parent_w - offset_w, 
-                offset_y, offset_x
-            );
-        }
+        return derwin(
+            parent_win, 
+            parent_h - offset_h, parent_w - offset_w, 
+            offset_y, offset_x
+        );
+    }
 
-        void destroy_window(WINDOW *window_ptr)
-        {
-            wborder(window_ptr, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
-            wrefresh(window_ptr);
-            delwin(window_ptr);
-        }
+    void destroy_window(WINDOW *window_ptr)
+    {
+        wborder(window_ptr, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
+        wrefresh(window_ptr);
+        delwin(window_ptr);
+    }
 
-        MENU *create_menu(WINDOW *parent_win, WINDOW *sub_win, ITEM **items)
-        {
-            MENU *menu_ptr = new_menu(items);
+    MENU *create_menu(WINDOW *parent_win, WINDOW *sub_win, ITEM **items)
+    {
+        MENU *menu_ptr = new_menu(items);
 
-            int parent_h, parent_w;
-            getmaxyx(parent_win, parent_h, parent_w);
+        int parent_h, parent_w;
+        getmaxyx(parent_win, parent_h, parent_w);
 
-            set_menu_win(menu_ptr, parent_win);
-            set_menu_sub(menu_ptr, sub_win);
-            set_menu_format(menu_ptr, parent_h-2, 1);
-            set_menu_mark(menu_ptr, " > ");
+        set_menu_win(menu_ptr, parent_win);
+        set_menu_sub(menu_ptr, sub_win);
+        set_menu_format(menu_ptr, parent_h-2, 1);
+        set_menu_mark(menu_ptr, " > ");
 
-            post_menu(menu_ptr);
-            // wrefresh(sub_win);
-            return menu_ptr;
-        }
+        post_menu(menu_ptr);
+        return menu_ptr;
+    }
 
-        void destroy_menu(MENU *menu_ptr)
-        {
-            unpost_menu(menu_ptr);
-            free_menu(menu_ptr);
-        }
+    void destroy_menu(MENU *menu_ptr)
+    {
+        unpost_menu(menu_ptr);
+        free_menu(menu_ptr);
+    }
 
-        FORM *create_form(WINDOW *parent_win, WINDOW *sub_win, FIELD **fields)
-        {
-            FORM *form_ptr = new_form(fields);
+    FORM *create_form(WINDOW *parent_win, WINDOW *sub_win, FIELD **fields)
+    {
+        FORM *form_ptr = new_form(fields);
 
-            int parent_h, parent_w;
-            getmaxyx(parent_win, parent_h, parent_w);
+        int parent_h, parent_w;
+        getmaxyx(parent_win, parent_h, parent_w);
 
-            set_form_win(form_ptr, parent_win);
-            set_form_sub(form_ptr, sub_win);
+        set_form_win(form_ptr, parent_win);
+        set_form_sub(form_ptr, sub_win);
 
-            post_form(form_ptr);
-            // wrefresh(sub_win);
-            return form_ptr;
-        }
+        post_form(form_ptr);
+        return form_ptr;
+    }
 
-        void destroy_form(FORM *form_ptr)
-        {
-            unpost_form(form_ptr);
-            free_form(form_ptr);
-        }
+    void destroy_form(FORM *form_ptr)
+    {
+        unpost_form(form_ptr);
+        free_form(form_ptr);
     }
 }
 
