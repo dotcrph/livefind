@@ -46,7 +46,7 @@ namespace flags {
     int force_mode = 0;
 
     void parse_flag(const FlagType flag, size_t &i, 
-                    int &argc, char **(&argv)) 
+                    int &argc, char **(&argv))
     {
         std::string arg{argv[i]};
 
@@ -110,3 +110,4 @@ namespace flags {
         }
     }
 }
+

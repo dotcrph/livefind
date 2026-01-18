@@ -82,14 +82,13 @@ namespace tui {
         move(LINES - 2, 1);
         doupdate();
 
-        while (true)
-        {
+        while (true) {
             static constexpr int CTRLC = 3;
             static constexpr int CTRLQ = 17;
 
             int input = getch();
 
-            if ((input == '\n' || input == KEY_ENTER)) {
+            if (input == '\n' || input == KEY_ENTER) {
                 std::string out = item_name(current_item(files_menu));
                 utils::trim_whitespace(out);
 
@@ -198,7 +197,7 @@ namespace tui {
         doupdate();
     }
 
-    void process_input(const int ch) 
+    void process_input(const int ch)
     {
         std::string input;
 
@@ -248,3 +247,4 @@ namespace tui {
         }
     }
 }
+

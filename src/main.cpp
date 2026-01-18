@@ -20,7 +20,7 @@ using Uptr = std::unique_ptr<T>;
 
 auto paths = std::make_unique<std::vector<std::string>>();
 
-int main(int argc, char *argv[]) 
+int main(int argc, char *argv[])
 {
     if (argc == 2 && (!strcmp(argv[1], "-h") 
                        || !strcmp(argv[1], "--help"))) {
@@ -74,7 +74,7 @@ bool try_parse_args(int &argc, char **(&argv))
     return true;
 }
 
-bool try_add_root_dir(const std::string &path, const bool canIgnore) 
+bool try_add_root_dir(const std::string &path, const bool canIgnore)
 {
     if (!utils::try_push_dir(path, paths.get())) {
         if (canIgnore) {
@@ -105,7 +105,7 @@ bool try_add_root_dir(const std::string &path, const bool canIgnore)
     return true;
 }
 
-bool try_iterate_dirs(const fs::path &path) 
+bool try_iterate_dirs(const fs::path &path)
 {
     fs::recursive_directory_iterator itr(path);
     fs::recursive_directory_iterator end;

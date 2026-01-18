@@ -21,7 +21,7 @@ template <typename T>
 using Uptr = std::unique_ptr<T>;
 
 namespace log {
-    void error(const char *msg, ...) 
+    void error(const char *msg, ...)
     {
         if (flags::verbosity_lvl < 1) return;
 
@@ -35,7 +35,7 @@ namespace log {
         std::cout << std::endl;
     }
 
-    void warning(const char *msg, ...) 
+    void warning(const char *msg, ...)
     {
         if (flags::verbosity_lvl < 2) return;
 
@@ -96,7 +96,7 @@ namespace log {
 
 namespace utils {
     bool try_push_dir(const std::string &dir, 
-                       std::vector<std::string> *target_vec) 
+                      std::vector<std::string> *target_vec) 
     {
         try {
             if (!(fs::exists(dir) && fs::is_directory(dir))) {
@@ -176,8 +176,10 @@ namespace tui {
                 wattron(window_ptr, A_REVERSE);
 
                 mvwaddch(window_ptr, 0, TITLE_X_OFFSET, ' ');
-                mvwprintw(window_ptr, 0, TITLE_X_OFFSET + 1, "%s", title.c_str());
-                mvwaddch(window_ptr, 0, TITLE_X_OFFSET + title.length() + 1, ' ');
+                mvwprintw(window_ptr, 0, TITLE_X_OFFSET + 1, 
+                          "%s", title.c_str());
+                mvwaddch(window_ptr, 0, TITLE_X_OFFSET + title.length() + 1, 
+                         ' ');
 
                 wattroff(window_ptr, A_REVERSE);
             }
@@ -249,3 +251,4 @@ namespace tui {
         }
     }
 }
+

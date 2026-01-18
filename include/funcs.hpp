@@ -7,13 +7,6 @@
 #include <menu.h>
 #include <form.h>
 
-// void init();
-// void exit_cleanup();
-//
-// bool try_fill_res_itms();
-//
-// void print_w_title(WINDOW* &win, const std::string &msg);
-
 namespace log {
     void error(const char *msg, ...);
     void warning(const char *msg, ...);
@@ -23,7 +16,7 @@ namespace log {
 
 namespace utils {
     bool try_push_dir(const std::string &dir, 
-                       std::vector<std::string> *target_vec);
+                      std::vector<std::string> *target_vec);
     void trim_whitespace(std::string &str);
     bool quick_write_file(const std::string &msg);
 }
@@ -36,8 +29,8 @@ namespace tui {
     namespace components {
         void draw_border(WINDOW *window_ptr, const std::string &title = "");
         WINDOW *create_derwin(WINDOW *parent_win, 
-                int offset_h, int offset_w, 
-                int offset_y, int offset_x);
+                              int offset_h, int offset_w, 
+                              int offset_y, int offset_x);
         void destroy_window(WINDOW *window_ptr);
 
         MENU *create_menu(WINDOW *parent_win, WINDOW *sub_win, ITEM **items);
@@ -47,3 +40,4 @@ namespace tui {
         void destroy_form(FORM *form_ptr);
     }
 }
+

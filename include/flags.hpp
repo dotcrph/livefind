@@ -10,6 +10,7 @@ namespace flags {
         MAX_DEPTH,
         FORCE_MODE
     };
+
     extern const std::unordered_map<std::string, FlagType> flag_hashmap;
     extern const std::unordered_map<std::string, int> verbosity_args;
     extern const std::unordered_map<std::string, int> force_mode_args;
@@ -20,3 +21,4 @@ namespace flags {
 
     void parse_flag(const FlagType flag, size_t &i, int &argc, char **(&argv));
 }
+
