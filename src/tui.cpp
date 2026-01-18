@@ -1,6 +1,9 @@
 #include "tui.hpp"
 
+#include <memory>
 #include <menu.h>
+#include <string>
+#include <unordered_set>
 #include <vector>
 
 #include <ncurses.h>
@@ -9,14 +12,12 @@
 #include "funcs.hpp"
 #include "main.hpp"
 
+template <typename T>
+using Uptr = std::unique_ptr<T>;
+
 namespace tui {
-    constexpr int CTRLC = 3;
-    constexpr int CTRLQ = 17;
-
-    constexpr int CTRLN = 14;
-    constexpr int CTRLP = 16;
-
     std::vector<ITEM*> *matched_dirs = new std::vector<ITEM*>();
+    std::string prev_search{};
 
     WINDOW *files_window;
     WINDOW *input_window;
@@ -83,24 +84,61 @@ namespace tui {
         endwin();
     }
 
-    void update_matched_dirs(const std::string &substring) {
+    void update_matched_dirs(const std::string &new_search)
+    {
+        static std::string prev_search = "";
+
+        if (new_search.length() == prev_search.length()) {
+            return;
+        }
+
+        bool reduce_dirs = new_search.length() > prev_search.length();
+
         components::destroy_menu(files_menu);
 
-        for (auto &item : *matched_dirs) {
-            free_item(item);
+        if (reduce_dirs) { 
+            // If the last edit to search buffer was adding a char
+            // we can just iterate through the existing directories
+
+            int i = 0;
+            while (i < matched_dirs->size()) {
+                ITEM *item = matched_dirs->at(i);
+
+                if (item == nullptr) break;
+
+                std::string name{item_name(item)};
+
+                if (name.find(new_search) == std::string::npos) {
+                    free_item(item);
+                    matched_dirs->erase(matched_dirs->begin() + i);
+                } else {
+                    i++;
+                }
+            }
+        } else {
+            matched_dirs->pop_back(); // remove last nullptr
+
+            auto prev_matches 
+                    = std::make_unique<std::unordered_set<std::string>>();
+
+            for (const auto &item : *matched_dirs) {
+                if (item == nullptr) break;
+                prev_matches->insert(std::string{item_name(item)});
+            }
+
+            for (const auto &path : *paths) {
+                if (prev_matches->find(path) == prev_matches->end()
+                    && path.find(new_search) != std::string::npos) {
+                    matched_dirs->push_back(new_item(path.c_str(), nullptr));
+                }
+            }
+
+            matched_dirs->push_back(nullptr);
         }
+
+        prev_search = new_search;
 
         wclear(files_window);
-
-        matched_dirs->clear();
-
-        for (const auto &path : *paths) {
-            if (substring.empty() 
-                || path.find(substring) != std::string::npos) {
-                matched_dirs->push_back(new_item(path.c_str(), nullptr));
-            }
-        }
-        matched_dirs->push_back(nullptr);
 
         files_menu = components::create_menu(files_window, 
                                              matched_dirs->data());
@@ -112,6 +150,12 @@ namespace tui {
 
     bool process_input(const int ch) 
     {
+        constexpr int CTRLC = 3;
+        constexpr int CTRLQ = 17;
+
+        constexpr int CTRLN = 14;
+        constexpr int CTRLP = 16;
+
         switch (ch) {
             case '\n':
             case KEY_ENTER:
