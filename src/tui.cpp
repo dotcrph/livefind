@@ -93,8 +93,13 @@ namespace tui {
             // mvprintw(1, COLS-10, "%s", std::to_string(input).c_str());
 
             if (input == ENTER) {
-                std::string out = item_name(current_item(files_menu));
-                utils::trim_whitespace(out);
+                std::string out{};
+                ITEM *cur_dir = current_item(files_menu);
+
+                if (cur_dir != nullptr) {
+                    out = item_name(cur_dir);
+                    utils::trim_whitespace(out);
+                }
 
                 cleanup();
                 endwin();
