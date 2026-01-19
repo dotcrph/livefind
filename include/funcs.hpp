@@ -23,6 +23,11 @@ namespace utils {
 
 namespace conversions {
     int str_to_int(const std::string &in);
+
+    constexpr int ctrl(const int ch) {
+        // Convert char to ctrl+char
+        return ch & 0x1f;
+    }
 }
 
 namespace tui::components {

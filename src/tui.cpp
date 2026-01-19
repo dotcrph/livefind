@@ -42,6 +42,9 @@ namespace tui {
         noecho();
         cbreak();
         raw();
+        nonl(); // Disable \r => \n translation
+                // WARNING: probably will break stuff on windows 
+                // (if i'll ever decide to port this)
         keypad(stdscr, TRUE); // For arrow keys
 
         curs_set(1);
@@ -83,12 +86,13 @@ namespace tui {
         doupdate();
 
         while (true) {
-            static constexpr int CTRLC = 3;
-            static constexpr int CTRLQ = 17;
+            static constexpr int ENTER = 13;
 
             int input = getch();
 
-            if (input == '\n' || input == KEY_ENTER) {
+            // mvprintw(1, COLS-10, "%s", std::to_string(input).c_str());
+
+            if (input == ENTER) {
                 std::string out = item_name(current_item(files_menu));
                 utils::trim_whitespace(out);
 
@@ -96,7 +100,8 @@ namespace tui {
                 endwin();
 
                 return out;
-            } else if (input == CTRLC || input == CTRLQ) {
+            } else if (input == conversions::ctrl('c') 
+                       || input == conversions::ctrl('q')) {
                 cleanup();
                 endwin();
 
@@ -201,11 +206,9 @@ namespace tui {
     {
         std::string input;
 
-        constexpr int CTRLN = 14;
-        constexpr int CTRLP = 16;
-
         switch (ch) {
-            case CTRLN:
+            case conversions::ctrl('n'):
+            case conversions::ctrl('j'):
             case KEY_DOWN:
                 menu_driver(files_menu, REQ_NEXT_MATCH);
 
@@ -213,7 +216,8 @@ namespace tui {
                 wrefresh(files_derwin);
                 break;
 
-            case CTRLP:
+            case conversions::ctrl('p'):
+            case conversions::ctrl('k'):
             case KEY_UP:
                 menu_driver(files_menu, REQ_PREV_MATCH);
 
