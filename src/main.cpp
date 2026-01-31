@@ -54,7 +54,7 @@ bool try_parse_args(int argc, char **argv)
 
     size_t i = 1;
     while (i < argc) {
-        auto &arg = args[i];
+        const auto &arg = args[i];
 
         if (flags::flag_hashmap.find(arg) != flags::flag_hashmap.end()) {
             flags::parse_flag(flags::flag_hashmap.at(arg), i, argc, argv);
