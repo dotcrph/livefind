@@ -12,30 +12,34 @@
 #include "main.hpp"
 
 namespace tui {
-    WINDOW *files_window;
-    WINDOW *files_derwin;
+    WINDOW *dirs_window;
+    WINDOW *dirs_derwin;
     WINDOW *input_window;
     WINDOW *input_derwin;
 
-    MENU *files_menu;
-    std::vector<ITEM*> *files_items;
+    MENU *dirs_menu;
+    std::vector<ITEM*> *dirs_entries;
 
     FORM *input_form;
     FIELD *input_fields[2];
 
     void cleanup();
-    void remove_files_items(const std::string &new_search);
-    void add_files_items(const std::string &new_search);
+
+    void create_dirs_components();
+    void create_input_components();
+
+    void remove_dirs_entries(const std::string &new_search);
+    void add_dirs_entries(const std::string &new_search);
     void process_input(const int ch);
 
     std::string run()
     {
-        files_items = new std::vector<ITEM*>();
+        dirs_entries = new std::vector<ITEM*>();
 
         for (const auto &path : *paths) {
-            files_items->push_back(new_item(path.c_str(), nullptr));
+            dirs_entries->push_back(new_item(path.c_str(), nullptr));
         }
-        files_items->push_back(nullptr);
+        dirs_entries->push_back(nullptr);
 
         initscr();
 
@@ -51,36 +55,8 @@ namespace tui {
 
         refresh(); // A refresh is required to draw windows
 
-        ///////////////////////////////
-        // Create directories window //
-        ///////////////////////////////
-
-        files_window = newwin(LINES - 3, COLS, 0, 0);
-        components::draw_border(files_window, "LiveFind");
-
-        files_derwin = components::create_derwin(files_window, 2, 2, 1, 1);
-
-        files_menu = components::create_menu(files_window, files_derwin,
-                                             files_items->data());
-
-        wnoutrefresh(files_window);
-
-        /////////////////////////
-        // Create input window //
-        /////////////////////////
-
-        input_window = newwin(3, COLS, LINES - 3, 0);
-        components::draw_border(input_window);
-
-        input_derwin = components::create_derwin(input_window, 2, 2, 1, 1);
-
-        input_fields[0] = new_field(1, COLS-2, 0, 0, 0, 0);
-        input_fields[1] = nullptr;
-
-        input_form = components::create_form(input_window, input_derwin, 
-                                             input_fields);
-
-        wnoutrefresh(input_window);
+        create_dirs_components();
+        create_input_components();
 
         move(LINES - 2, 1);
         doupdate();
@@ -94,7 +70,7 @@ namespace tui {
 
             if (input == ENTER) {
                 std::string out{};
-                ITEM *cur_dir = current_item(files_menu);
+                ITEM *cur_dir = current_item(dirs_menu);
 
                 if (cur_dir != nullptr) {
                     out = item_name(cur_dir);
@@ -120,16 +96,16 @@ namespace tui {
     void cleanup()
     {
         // Directories window
-        for (auto &item : *files_items) {
+        for (auto &item : *dirs_entries) {
             free_item(item);
         }
 
-        components::destroy_menu(files_menu);
+        components::destroy_menu(dirs_menu);
 
-        delete files_items;
+        delete dirs_entries;
 
-        delwin(files_derwin);
-        components::destroy_window(files_window);
+        delwin(dirs_derwin);
+        components::destroy_window(dirs_window);
 
         // Input window
         for (auto &field : input_fields) {
@@ -142,16 +118,46 @@ namespace tui {
         components::destroy_window(input_window);
     }
 
-    void remove_files_items(const std::string &new_search)
+    void create_dirs_components()
+    {
+        dirs_window = newwin(LINES - 3, COLS, 0, 0);
+        components::draw_border(dirs_window, "LiveFind");
+
+        dirs_derwin = components::create_derwin(dirs_window, 2, 2, 1, 1);
+
+        dirs_menu = components::create_menu(dirs_window, dirs_derwin,
+                                             dirs_entries->data());
+
+        wnoutrefresh(dirs_window);
+
+    }
+
+    void create_input_components()
+    {
+        input_window = newwin(3, COLS, LINES - 3, 0);
+        components::draw_border(input_window);
+
+        input_derwin = components::create_derwin(input_window, 2, 2, 1, 1);
+
+        input_fields[0] = new_field(1, COLS-2, 0, 0, 0, 0);
+        input_fields[1] = nullptr;
+
+        input_form = components::create_form(input_window, input_derwin, 
+                                             input_fields);
+
+        wnoutrefresh(input_window);
+    }
+
+    void remove_dirs_entries(const std::string &new_search)
     {
         // If the last edit to the search buffer was adding a char
         // we can just iterate through the existing directories
 
-        components::destroy_menu(files_menu);
+        components::destroy_menu(dirs_menu);
 
         int i = 0;
-        while (i < files_items->size()) {
-            ITEM *item = files_items->at(i);
+        while (i < dirs_entries->size()) {
+            ITEM *item = dirs_entries->at(i);
 
             if (item == nullptr) break;
 
@@ -159,50 +165,50 @@ namespace tui {
 
             if (name.find(new_search) == std::string::npos) {
                 free_item(item);
-                files_items->erase(files_items->begin() + i);
+                dirs_entries->erase(dirs_entries->begin() + i);
             } else {
                 i++;
             }
         }
 
-        werase(files_window);
+        werase(dirs_window);
 
-        files_menu = components::create_menu(files_window, files_derwin,
-                                             files_items->data());
+        dirs_menu = components::create_menu(dirs_window, dirs_derwin,
+                                             dirs_entries->data());
 
-        wnoutrefresh(files_derwin);
+        wnoutrefresh(dirs_derwin);
         wnoutrefresh(input_derwin);
         doupdate();
     }
 
-    void add_files_items(const std::string &new_search)
+    void add_dirs_entries(const std::string &new_search)
     {
-        components::destroy_menu(files_menu);
+        components::destroy_menu(dirs_menu);
 
-        files_items->pop_back(); // remove last nullptr
+        dirs_entries->pop_back(); // remove last nullptr
 
         auto prev_matches 
                 = std::make_unique<std::unordered_set<std::string>>();
 
-        for (const auto &item : *files_items) {
+        for (const auto &item : *dirs_entries) {
             prev_matches->insert(std::string{item_name(item)});
         }
 
         for (const auto &path : *paths) {
             if (prev_matches->find(path) == prev_matches->end()
                 && path.find(new_search) != std::string::npos) {
-                files_items->push_back(new_item(path.c_str(), nullptr));
+                dirs_entries->push_back(new_item(path.c_str(), nullptr));
             }
         }
 
-        files_items->push_back(nullptr);
+        dirs_entries->push_back(nullptr);
 
-        werase(files_window);
+        werase(dirs_window);
 
-        files_menu = components::create_menu(files_window, files_derwin,
-                                             files_items->data());
+        dirs_menu = components::create_menu(dirs_window, dirs_derwin,
+                                             dirs_entries->data());
 
-        wnoutrefresh(files_derwin);
+        wnoutrefresh(dirs_derwin);
         wnoutrefresh(input_derwin);
         doupdate();
     }
@@ -215,19 +221,19 @@ namespace tui {
             case conversions::ctrl('n'):
             case conversions::ctrl('j'):
             case KEY_DOWN:
-                menu_driver(files_menu, REQ_NEXT_MATCH);
+                menu_driver(dirs_menu, REQ_NEXT_MATCH);
 
                 curs_set(0);
-                wrefresh(files_derwin);
+                wrefresh(dirs_derwin);
                 break;
 
             case conversions::ctrl('p'):
             case conversions::ctrl('k'):
             case KEY_UP:
-                menu_driver(files_menu, REQ_PREV_MATCH);
+                menu_driver(dirs_menu, REQ_PREV_MATCH);
 
                 curs_set(0);
-                wrefresh(files_derwin);
+                wrefresh(dirs_derwin);
                 break;
 
             case KEY_BACKSPACE:
@@ -237,7 +243,7 @@ namespace tui {
 
                 input = field_buffer(input_fields[0], 0);
                 utils::trim_whitespace(input);
-                add_files_items(input);
+                add_dirs_entries(input);
 
                 curs_set(1);
                 move(LINES - 2, input.length() + 1);
@@ -248,7 +254,7 @@ namespace tui {
 
                 input = field_buffer(input_fields[0], 0);
                 utils::trim_whitespace(input);
-                remove_files_items(input);
+                remove_dirs_entries(input);
 
                 curs_set(1);
                 move(LINES - 2, input.length() + 1);
