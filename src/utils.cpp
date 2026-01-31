@@ -28,7 +28,7 @@ namespace log {
 
         va_list args;
         va_start(args, msg);
-        vprintf(msg, args);
+        vfprintf(stderr, msg, args);
         va_end(args);
 
         std::cerr << std::endl;
@@ -42,7 +42,7 @@ namespace log {
 
         va_list args;
         va_start(args, msg);
-        vprintf(msg, args);
+        vfprintf(stderr, msg, args);
         va_end(args);
 
         std::clog << std::endl;
@@ -56,7 +56,7 @@ namespace log {
 
         va_list args;
         va_start(args, msg);
-        vprintf(msg, args);
+        vfprintf(stderr, msg, args);
         va_end(args);
 
         std::clog << std::endl;
@@ -140,6 +140,17 @@ namespace utils {
 }
 
 namespace conversions {
+    std::vector<std::string> convert_args(int argc, char **argv)
+    {
+        std::vector<std::string> args(argc);
+
+        for (int i = 0; i < argc; i++) {
+            args.emplace_back(argv[i]);
+        }
+
+        return args;
+    }
+
     int str_to_int(const std::string &in)
     {
         // IMPORTANT: THIS MUST ONLY BE USED INSIDE TRY/CATCH

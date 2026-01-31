@@ -15,7 +15,7 @@ namespace fs = std::filesystem;
 template <typename T>
 using Uptr = std::unique_ptr<T>;
 
-bool try_parse_args(int &argc, char **(&argv));
+bool try_parse_args(int argc, char **argv);
 bool try_add_root_dir(const std::string &path, const bool canIgnore = false);
 bool try_iterate_dirs(const std::filesystem::path &path);
 
@@ -23,12 +23,6 @@ auto paths = std::make_unique<std::vector<std::string>>();
 
 int main(int argc, char *argv[])
 {
-    if (argc == 2 && (!strcmp(argv[1], "-h") 
-                      || !strcmp(argv[1], "--help"))) {
-        log::print_help();
-        return EXIT_FAILURE;
-    }
-
     if (!try_parse_args(argc, argv)) {
         return EXIT_FAILURE;
     }
@@ -43,16 +37,24 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 }
 
-bool try_parse_args(int &argc, char **(&argv))
+bool try_parse_args(int argc, char **argv)
 {
-    if (argc <= 1) {
+    auto args = conversions::convert_args(argc, argv);
+
+    if (args.size() <= 1) {
         log::warning("No arguments provided, adding current directory to index");
         return try_add_root_dir(".");
     }
 
+    if (args.size() == 2 
+        && (args[1] == "-h" || args[1] == "--help")) {
+        log::print_help();
+        return false;
+    }
+
     size_t i = 1;
     while (i < argc) {
-        std::string arg{argv[i]};
+        auto &arg = args[i];
 
         if (flags::flag_hashmap.find(arg) != flags::flag_hashmap.end()) {
             flags::parse_flag(flags::flag_hashmap.at(arg), i, argc, argv);

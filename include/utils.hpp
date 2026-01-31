@@ -22,6 +22,7 @@ namespace utils {
 }
 
 namespace conversions {
+    std::vector<std::string> convert_args(int argc, char **argv);
     int str_to_int(const std::string &in);
 
     constexpr int ctrl(const int ch) {
