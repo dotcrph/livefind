@@ -18,7 +18,6 @@ namespace utils {
     bool try_push_dir(const std::string &dir, 
                       std::vector<std::string> *target_vec);
     void trim_whitespace(std::string &str);
-    bool quick_write_file(const std::string &msg);
 }
 
 namespace conversions {

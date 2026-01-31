@@ -4,7 +4,6 @@
 #include <cstdarg>
 
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <regex>
 
@@ -121,21 +120,6 @@ namespace utils {
         } else {
             str.erase(last_chr + 1);
         }
-    }
-
-    bool quick_write_file(const std::string &msg)
-    {
-        auto file = std::make_unique<std::ofstream>("#LivefindOutput#");
-
-        if (!file->is_open()) {
-            log::error("Failed to make a temporary file!");
-            return false;
-        }
-
-        *file << msg;
-
-        file->close();
-        return true;
     }
 }
 
