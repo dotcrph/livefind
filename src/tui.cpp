@@ -8,7 +8,7 @@
 #include <form.h>
 #include <menu.h>
 
-#include "funcs.hpp"
+#include "utils.hpp"
 #include "main.hpp"
 
 namespace tui {

@@ -1,4 +1,4 @@
-SRCS = src/main.cpp src/funcs.cpp src/flags.cpp src/tui.cpp
+SRCS = src/main.cpp src/utils.cpp src/flags.cpp src/tui.cpp
 OBJS = $(SRCS:src/%.cpp=obj/%.o)
 PRNAME = lf
 

@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "flags.hpp"
-#include "funcs.hpp"
+#include "utils.hpp"
 #include "tui.hpp"
 
 namespace fs = std::filesystem;
@@ -95,7 +95,7 @@ bool try_add_root_dir(const std::string &path, const bool canIgnore)
             case 2:
                 return true;
             case 0:
-                std::cout << "Something went wrong while iterating through directories. Do you wish to continue? (y/\033[4mn\033[0m)"
+                std::clog << "Something went wrong while iterating through directories. Do you wish to continue? (y/\033[4mn\033[0m)"
                           << std::endl;
                 char input = 'n';
                 std::cin >> input;

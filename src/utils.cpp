@@ -1,4 +1,4 @@
-#include "funcs.hpp"
+#include "utils.hpp"
 
 #include <cstdio>
 #include <cstdarg>
@@ -24,47 +24,47 @@ namespace log {
     {
         if (flags::verbosity_lvl < 1) return;
 
-        std::cout << "\033[1;31m" << "ERROR" << "\033[0m" << ": ";
+        std::cerr << "\033[1;31m" << "ERROR" << "\033[0m" << ": ";
 
         va_list args;
         va_start(args, msg);
         vprintf(msg, args);
         va_end(args);
 
-        std::cout << std::endl;
+        std::cerr << std::endl;
     }
 
     void warning(const char *msg, ...)
     {
         if (flags::verbosity_lvl < 2) return;
 
-        std::cout << "\033[1;33m" << "Warning" << "\033[0m" << ": ";
+        std::clog << "\033[1;33m" << "Warning" << "\033[0m" << ": ";
 
         va_list args;
         va_start(args, msg);
         vprintf(msg, args);
         va_end(args);
 
-        std::cout << std::endl;
+        std::clog << std::endl;
     }
 
     void verbose(const char *msg, ...) 
     {
         if (flags::verbosity_lvl < 3) return;
 
-        std::cout << "\033[1;36m" << "Info" << "\033[0m" << ": ";
+        std::clog << "\033[1;36m" << "Info" << "\033[0m" << ": ";
 
         va_list args;
         va_start(args, msg);
         vprintf(msg, args);
         va_end(args);
 
-        std::cout << std::endl;
+        std::clog << std::endl;
     }
 
     void print_help() 
     {
-        std::cout <<
+        std::clog <<
 
 "\033[1mlivefind [-Options] [Directories]\033[0m\n"
 "\n"

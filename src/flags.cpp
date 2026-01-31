@@ -1,5 +1,5 @@
 #include "flags.hpp"
-#include "funcs.hpp"
+#include "utils.hpp"
 
 #include <stdexcept>
 #include <string>
