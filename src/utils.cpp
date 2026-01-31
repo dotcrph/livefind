@@ -129,7 +129,7 @@ namespace conversions {
         std::vector<std::string> args(argc);
 
         for (int i = 0; i < argc; i++) {
-            args.emplace_back(argv[i]);
+            args[i] = argv[i];
         }
 
         return args;
