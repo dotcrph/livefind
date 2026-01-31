@@ -89,7 +89,7 @@ namespace log {
 "        [unsigned int]                : Max recursion depth\n"
 "        ( Default value: 1 )\n"
 
-        << std::endl;
+        << std::flush;
     }
 }
 
