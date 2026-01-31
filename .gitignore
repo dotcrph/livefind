@@ -1,5 +1,5 @@
 .cache/
 obj/
-livefind
+lf
 compile_commands.json
 \#LivefindOutput#

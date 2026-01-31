@@ -1,6 +1,6 @@
 SRCS = src/main.cpp src/funcs.cpp src/flags.cpp src/tui.cpp
 OBJS = $(SRCS:src/%.cpp=obj/%.o)
-PRNAME = livefind
+PRNAME = lf
 
 $(PRNAME): $(OBJS)
 	clang++ $(OBJS) -o $(PRNAME) -Iinclude -lncurses -lmenu -lform -Wall -Wpedantic -O2
