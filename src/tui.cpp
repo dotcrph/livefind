@@ -12,6 +12,9 @@
 #include "main.hpp"
 
 namespace tui {
+    FILE *tty_file;
+    SCREEN *tty;
+
     WINDOW *dirs_window;
     WINDOW *dirs_derwin;
     WINDOW *input_window;
@@ -24,6 +27,7 @@ namespace tui {
     FIELD *input_fields[2];
 
     void cleanup();
+    bool try_open_tty();
 
     void create_dirs_components();
     void create_input_components();
@@ -41,7 +45,11 @@ namespace tui {
         }
         dirs_entries->push_back(nullptr);
 
-        initscr();
+        if(!try_open_tty())
+        {
+            cleanup();
+            return "";
+        }
 
         noecho();
         cbreak();
@@ -78,13 +86,11 @@ namespace tui {
                 }
 
                 cleanup();
-                endwin();
 
                 return out;
             } else if (input == conversions::ctrl('c') 
                        || input == conversions::ctrl('q')) {
                 cleanup();
-                endwin();
 
                 return "";
             } else {
@@ -116,6 +122,31 @@ namespace tui {
 
         delwin(input_derwin);
         components::destroy_window(input_window);
+
+        endwin();
+
+        delscreen(tty);
+        fclose(tty_file);
+    }
+
+    bool try_open_tty()
+    {
+        tty_file = fopen("/dev/tty", "r+");
+        if (!tty_file)
+        {
+            log::error("Failed to open /dev/tty!");
+            return false;
+        }
+
+        tty = newterm(nullptr, tty_file, tty_file); // nullptr = $TERM here
+        if (!tty_file)
+        {
+            log::error("Failed to create a new terminal from /dev/tty!");
+            return false;
+        }
+
+        set_term(tty);
+        return true;
     }
 
     void create_dirs_components()

@@ -35,11 +35,11 @@ int main(int argc, char *argv[])
 
     std::string path = tui::run();
 
-    // The order of operations below is correct
-    if (!utils::quick_write_file(path) || path.empty()) {
+    if (path.empty()) {
         return EXIT_FAILURE;
     }
 
+    std::cout << path;
     return EXIT_SUCCESS;
 }
 
