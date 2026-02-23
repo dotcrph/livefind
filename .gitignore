@@ -1,4 +1,1 @@
-.cache/
-obj/
-lf
-compile_commands.json
+build/
