@@ -40,13 +40,12 @@ namespace tui {
     {
         dirs_entries = new std::vector<ITEM*>();
 
-        for (const auto &path : *paths) {
+        for (const auto &path : *paths)
             dirs_entries->push_back(new_item(path.c_str(), nullptr));
-        }
+
         dirs_entries->push_back(nullptr);
 
-        if(!try_open_tty())
-        {
+        if(!try_open_tty()) {
             cleanup();
             return "";
         }
@@ -89,7 +88,8 @@ namespace tui {
 
                 return out;
             } else if (input == conversions::ctrl('c') 
-                       || input == conversions::ctrl('q')) {
+                       || input == conversions::ctrl('q')
+            ) {
                 cleanup();
 
                 return "";
@@ -132,15 +132,13 @@ namespace tui {
     bool try_open_tty()
     {
         tty_file = fopen("/dev/tty", "r+");
-        if (!tty_file)
-        {
+        if (!tty_file) {
             log::error("Failed to open /dev/tty!");
             return false;
         }
 
         tty = newterm(nullptr, tty_file, tty_file); // nullptr = $TERM here
-        if (!tty_file)
-        {
+        if (!tty_file) {
             log::error("Failed to create a new terminal from /dev/tty!");
             return false;
         }
@@ -160,7 +158,6 @@ namespace tui {
                                              dirs_entries->data());
 
         wnoutrefresh(dirs_window);
-
     }
 
     void create_input_components()
