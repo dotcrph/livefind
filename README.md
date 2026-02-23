@@ -1,17 +1,17 @@
 # Livefind
 
 > Ncurses-based live directory search tool 
-(also a (fzf)[https://github.com/junegunn/fzf/] clone)
+(also a [fzf](https://github.com/junegunn/fzf/) clone)
 
 ## 🖥️ Usage
 
-```livefind [-args] [space-separated directories]```\
+```livefind [-args] [space-separated directories]```
 
 Pass in a list of directiories, find and select a specific directory, and 
 livefind will output it in stdout. 
 
 > [!NOTE]
-> Livefind recognizes args as anything listed in [Flags (-args)](#flags--args), 
+> Livefind recognizes args as anything listed in [Flags (-args)](#-flags--args), 
 even if it is in a middle of a list of directories. Flags are also applied as 
 encountered. As such, you should pass flags first to avoid strange behaviour, 
 although you can do some cool stuff with this if you know what you are doing.
