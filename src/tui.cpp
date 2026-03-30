@@ -1,69 +1,73 @@
 #include "tui.hpp"
 
+#include <cstddef>
+#include <cstdio>
+#include <cstring>
 #include <string>
-#include <unordered_set>
-#include <vector>
 
 #include <ncurses.h>
 #include <form.h>
 #include <menu.h>
 
 #include "utils.hpp"
-#include "main.hpp"
+#include "tui_components.hpp"
 
 namespace tui {
-    FILE *tty_file;
+    FILE *ttyFile;
     SCREEN *tty;
 
-    WINDOW *dirs_window;
-    WINDOW *dirs_derwin;
-    WINDOW *input_window;
-    WINDOW *input_derwin;
+    WINDOW *entriesWindow,
+           *entriesDerwin,
+           *inputWindow,
+           *inputDerwin;
 
-    MENU *dirs_menu;
-    std::vector<ITEM*> *dirs_entries;
+    MENU *entriesMenu;
 
-    FORM *input_form;
-    FIELD *input_fields[2];
+    FORM *inputForm;
+    FIELD *inputFields[2];
 
-    void cleanup();
-    bool try_open_tty();
+    std::vector<types::Entry> entriesCache; 
+    /// Description:
+    ///     A vector with types::Entry objects generated in createEntry(). 
+    ///     This should not be changed after calling initializeEntries(), 
+    ///     as it is assumed by the program that the size of entries array 
+    ///     is equal to entriesCache.size() + 1!
 
-    void create_dirs_components();
-    void create_input_components();
-
-    void remove_dirs_entries(const std::string &new_search);
-    void add_dirs_entries(const std::string &new_search);
-    void process_input(const int ch);
+    ITEM **entries; 
+    /// Description:
+    ///     Arena for all qualifying search entries terminated by nullptr.
+    ///     Has size of entriesCache.size() + 1 (all entries + sentinel 
+    ///     nullptr required by ncurses library). Regenerated in 
+    ///     updateEntries().
 
     std::string run()
     {
-        dirs_entries = new std::vector<ITEM*>();
-
-        for (const auto &path : *paths)
-            dirs_entries->push_back(new_item(path.c_str(), nullptr));
-
-        dirs_entries->push_back(nullptr);
-
-        if(!try_open_tty()) {
-            cleanup();
+        if (entriesCache.empty()) {
+            log::warning("No paths provided!");
             return "";
         }
+
+        if(!tryOpenTty()) {
+            return "";
+        }
+
+        initializeEntries();
 
         noecho();
         cbreak();
         raw();
-        nonl(); // Disable \r => \n translation
-                // WARNING: probably will break stuff on windows 
-                // (if i'll ever decide to port this)
+
+        // Disable \r => \n translation. This is 
+        // to disable default Ctrl-j behaviour.
+        nonl(); 
         keypad(stdscr, TRUE); // For arrow keys
 
         curs_set(1);
 
         refresh(); // A refresh is required to draw windows
 
-        create_dirs_components();
-        create_input_components();
+        createEntriesComponents();
+        createInputComponents();
 
         move(LINES - 2, 1);
         doupdate();
@@ -75,71 +79,120 @@ namespace tui {
 
             // mvprintw(1, COLS-10, "%s", std::to_string(input).c_str());
 
-            if (input == ENTER) {
-                std::string out{};
-                ITEM *cur_dir = current_item(dirs_menu);
+            // TODO: Move all of the things below in processInput()
 
-                if (cur_dir != nullptr) {
-                    out = item_name(cur_dir);
-                    utils::trim_whitespace(out);
+            if (input == ENTER) {
+                std::string selectedDir{};
+                ITEM *currentDir = current_item(entriesMenu);
+
+                if (currentDir != nullptr) {
+                    selectedDir = item_name(currentDir);
+                    utils::strTrimWhitespace(selectedDir);
                 }
 
                 cleanup();
+                return selectedDir;
+            } 
 
-                return out;
-            } else if (input == conversions::ctrl('c') 
-                       || input == conversions::ctrl('q')
-            ) {
+            if (input == conversions::ctrl('c') || 
+                input == conversions::ctrl('q')) {
                 cleanup();
-
                 return "";
-            } else {
-                process_input(input);
-            }
+            } 
+
+            processInput(input);
         }
     }
 
     void cleanup()
     {
-        // Directories window
-        for (auto &item : *dirs_entries) {
-            free_item(item);
-        }
+        // Entries menu
+        components::destroyMenu(entriesMenu);
 
-        components::destroy_menu(dirs_menu);
+        delwin(entriesDerwin);
+        components::destroyWindow(entriesWindow);
 
-        delete dirs_entries;
+        delete[] entries;
 
-        delwin(dirs_derwin);
-        components::destroy_window(dirs_window);
+        // Input form
+        components::destroyForm(inputForm);
 
-        // Input window
-        for (auto &field : input_fields) {
+        for (FIELD *field : inputFields)
             free_field(field);
-        }
 
-        components::destroy_form(input_form);
+        delwin(inputDerwin);
+        components::destroyWindow(inputWindow);
 
-        delwin(input_derwin);
-        components::destroy_window(input_window);
-
+        // TUI
         endwin();
 
         delscreen(tty);
-        fclose(tty_file);
+        fclose(ttyFile);
     }
 
-    bool try_open_tty()
+    void createEntry(const std::string &name)
     {
-        tty_file = fopen("/dev/tty", "r+");
-        if (!tty_file) {
+        log::verbose("Adding entry '%s'", name.c_str());
+        entriesCache.emplace_back(name);
+    }
+
+    void initializeEntries()
+    {
+        log::verbose("Total directories scanned: %d", entriesCache.size());
+
+        for (auto &entry : entriesCache)
+            entry.initialize();
+
+        // +1 for a sentinel nullptr required by ncurses
+        entries = new ITEM * [entriesCache.size() + 1];
+
+        for (size_t i = 0; i < entriesCache.size(); i++)
+            entries[i] = entriesCache[i].item();
+
+        entries[entriesCache.size()] = nullptr;
+    }
+
+    void updateEntries(const std::string &searchString)
+    {
+        components::destroyMenu(entriesMenu);
+        werase(entriesWindow);
+
+        ITEM **nextFree = entries;
+        for (size_t i = 0; i < entriesCache.size(); i++) {
+            types::Entry &entry = entriesCache[i];
+
+            if (entry.name().find(searchString) == std::string::npos)
+                continue;
+
+            *nextFree = entry.item();
+            nextFree++;
+        }
+
+        *nextFree = nullptr; // Sentinel required by ncurses
+
+        entriesMenu = components::createMenu(
+            entriesWindow, 
+            entriesDerwin, 
+            entries
+        );
+
+        wnoutrefresh(entriesDerwin);
+        wnoutrefresh(inputDerwin);
+        doupdate();
+    }
+
+    bool tryOpenTty()
+    {
+        ttyFile = fopen("/dev/tty", "r+");
+        if (!ttyFile) {
             log::error("Failed to open /dev/tty!");
             return false;
         }
 
-        tty = newterm(nullptr, tty_file, tty_file); // nullptr = $TERM here
-        if (!tty_file) {
+        tty = newterm(nullptr, ttyFile, ttyFile); // nullptr = $TERM here
+        if (!tty) {
             log::error("Failed to create a new terminal from /dev/tty!");
+            fclose(ttyFile);
             return false;
         }
 
@@ -147,142 +200,88 @@ namespace tui {
         return true;
     }
 
-    void create_dirs_components()
+    void createEntriesComponents()
     {
-        dirs_window = newwin(LINES - 3, COLS, 0, 0);
-        components::draw_border(dirs_window, "LiveFind");
+        entriesWindow = newwin(LINES - 3, COLS, 0, 0);
+        components::drawBorder(entriesWindow, "livefind");
 
-        dirs_derwin = components::create_derwin(dirs_window, 2, 2, 1, 1);
+        entriesDerwin = components::createDerwin(entriesWindow, 1, 1, 1, 1);
 
-        dirs_menu = components::create_menu(dirs_window, dirs_derwin,
-                                             dirs_entries->data());
+        entriesMenu = components::createMenu(
+            entriesWindow, 
+            entriesDerwin,
+            entries
+        );
 
-        wnoutrefresh(dirs_window);
+        wnoutrefresh(entriesWindow);
     }
 
-    void create_input_components()
+    void createInputComponents()
     {
-        input_window = newwin(3, COLS, LINES - 3, 0);
-        components::draw_border(input_window);
+        inputWindow = newwin(3, COLS, LINES - 3, 0);
+        components::drawBorder(inputWindow);
 
-        input_derwin = components::create_derwin(input_window, 2, 2, 1, 1);
+        inputDerwin = components::createDerwin(inputWindow, 1, 1, 1, 1);
 
-        input_fields[0] = new_field(1, COLS-2, 0, 0, 0, 0);
-        input_fields[1] = nullptr;
+        inputFields[0] = new_field(1, COLS-2, 0, 0, 0, 0);
+        inputFields[1] = nullptr;
 
-        input_form = components::create_form(input_window, input_derwin, 
-                                             input_fields);
+        inputForm = components::createForm(
+            inputWindow, 
+            inputDerwin, 
+            inputFields
+        );
 
-        wnoutrefresh(input_window);
+        wnoutrefresh(inputWindow);
     }
 
-    void remove_dirs_entries(const std::string &new_search)
+    void processInput(const int ch)
     {
-        // If the last edit to the search buffer was adding a char
-        // we can just iterate through the existing directories
-
-        components::destroy_menu(dirs_menu);
-
-        int i = 0;
-        while (i < dirs_entries->size()) {
-            ITEM *item = dirs_entries->at(i);
-
-            if (item == nullptr) break;
-
-            std::string name{item_name(item)};
-
-            if (name.find(new_search) == std::string::npos) {
-                free_item(item);
-                dirs_entries->erase(dirs_entries->begin() + i);
-            } else {
-                i++;
-            }
-        }
-
-        werase(dirs_window);
-
-        dirs_menu = components::create_menu(dirs_window, dirs_derwin,
-                                             dirs_entries->data());
-
-        wnoutrefresh(dirs_derwin);
-        wnoutrefresh(input_derwin);
-        doupdate();
-    }
-
-    void add_dirs_entries(const std::string &new_search)
-    {
-        components::destroy_menu(dirs_menu);
-
-        dirs_entries->pop_back(); // remove last nullptr
-
-        auto prev_matches 
-                = std::make_unique<std::unordered_set<std::string>>();
-
-        for (const auto &item : *dirs_entries) {
-            prev_matches->insert(std::string{item_name(item)});
-        }
-
-        for (const auto &path : *paths) {
-            if (prev_matches->find(path) == prev_matches->end()
-                && path.find(new_search) != std::string::npos) {
-                dirs_entries->push_back(new_item(path.c_str(), nullptr));
-            }
-        }
-
-        dirs_entries->push_back(nullptr);
-
-        werase(dirs_window);
-
-        dirs_menu = components::create_menu(dirs_window, dirs_derwin,
-                                             dirs_entries->data());
-
-        wnoutrefresh(dirs_derwin);
-        wnoutrefresh(input_derwin);
-        doupdate();
-    }
-
-    void process_input(const int ch)
-    {
+        // TODO: Add horizontal cursor movement/editing
         std::string input;
 
         switch (ch) {
             case conversions::ctrl('n'):
             case conversions::ctrl('j'):
             case KEY_DOWN:
-                menu_driver(dirs_menu, REQ_NEXT_MATCH);
+                menu_driver(entriesMenu, REQ_NEXT_MATCH);
 
                 curs_set(0);
-                wrefresh(dirs_derwin);
+                wrefresh(entriesDerwin);
                 break;
 
             case conversions::ctrl('p'):
             case conversions::ctrl('k'):
             case KEY_UP:
-                menu_driver(dirs_menu, REQ_PREV_MATCH);
+                menu_driver(entriesMenu, REQ_PREV_MATCH);
 
                 curs_set(0);
-                wrefresh(dirs_derwin);
+                wrefresh(entriesDerwin);
                 break;
 
             case KEY_BACKSPACE:
-                form_driver(input_form, REQ_PREV_CHAR);
-                form_driver(input_form, REQ_DEL_CHAR);
-                form_driver(input_form, REQ_VALIDATION);
+                form_driver(inputForm, REQ_PREV_CHAR);
+                form_driver(inputForm, REQ_DEL_CHAR);
+                form_driver(inputForm, REQ_VALIDATION);
 
-                input = field_buffer(input_fields[0], 0);
-                utils::trim_whitespace(input);
-                add_dirs_entries(input);
+                input = field_buffer(inputFields[0], 0);
+                utils::strTrimWhitespace(input);
+                updateEntries(input);
 
                 curs_set(1);
                 move(LINES - 2, input.length() + 1);
                 break;
             default:
-                form_driver(input_form, ch);
-                form_driver(input_form, REQ_VALIDATION);
+                form_driver(inputForm, ch);
+                form_driver(inputForm, REQ_VALIDATION);
 
-                input = field_buffer(input_fields[0], 0);
-                utils::trim_whitespace(input);
-                remove_dirs_entries(input);
+                // FIXME: Check if a character is a display character.
+                // When pressing tab, for example, updateEntries() still 
+                // runs, and that resets user selection
+
+                input = field_buffer(inputFields[0], 0);
+                utils::strTrimWhitespace(input);
+                updateEntries(input);
 
                 curs_set(1);
                 move(LINES - 2, input.length() + 1);

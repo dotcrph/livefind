@@ -2,6 +2,7 @@ set(SourceFiles
     "${PROJECT_SOURCE_DIR}/src/main.cpp"
     "${PROJECT_SOURCE_DIR}/src/utils.cpp"
     "${PROJECT_SOURCE_DIR}/src/tui.cpp"
+    "${PROJECT_SOURCE_DIR}/src/tui_components.cpp"
     "${PROJECT_SOURCE_DIR}/src/flags.cpp"
 )
 

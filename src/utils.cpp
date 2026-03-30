@@ -1,11 +1,16 @@
 #include "utils.hpp"
 
+#include <cassert>
+#include <cctype>
 #include <cstdio>
 #include <cstdarg>
 
-#include <filesystem>
 #include <iostream>
-#include <regex>
+#include <limits>
+#include <string>
+#include <utility>
+#include <vector>
+#include <filesystem>
 
 #include <ncurses.h>
 #include <menu.h>
@@ -13,232 +18,266 @@
 
 #include "flags.hpp"
 
-namespace fs = std::filesystem;
-
-template <typename T>
-using Uptr = std::unique_ptr<T>;
-
 namespace log {
-    void error(const char *msg, ...)
+    void error(const char *fmt, ...)
     {
-        if (flags::verbosity_lvl < 1) return;
-
-        std::cerr << "\033[1;31m" << "ERROR" << "\033[0m" << ": ";
-
         va_list args;
-        va_start(args, msg);
-        vfprintf(stderr, msg, args);
-        va_end(args);
+        va_start(args, fmt);
 
-        std::cerr << std::endl;
+        logGeneric(
+            1,          // Min verbosity lvl
+            stderr,     // Output stream
+            "\x1b[1;31mERROR\x1b[0m",   // Prefix
+            fmt,        // Format string
+            args        // Variadic arguments
+        );
+
+        va_end(args);
     }
 
-    void warning(const char *msg, ...)
+    void warning(const char *fmt, ...)
     {
-        if (flags::verbosity_lvl < 2) return;
-
-        std::clog << "\033[1;33m" << "Warning" << "\033[0m" << ": ";
-
         va_list args;
-        va_start(args, msg);
-        vfprintf(stderr, msg, args);
-        va_end(args);
+        va_start(args, fmt);
 
-        std::clog << std::endl;
+        logGeneric(
+            2,          // Min verbosity lvl
+            stderr,     // Output stream
+            "\x1b[1;33mWarning\x1b[0m", // Prefix
+            fmt,        // Format string
+            args        // Variadic arguments
+        );
+
+        va_end(args);
     }
 
-    void verbose(const char *msg, ...) 
+    void verbose(const char *fmt, ...) 
     {
-        if (flags::verbosity_lvl < 3) return;
-
-        std::clog << "\033[1;36m" << "Info" << "\033[0m" << ": ";
-
         va_list args;
-        va_start(args, msg);
-        vfprintf(stderr, msg, args);
-        va_end(args);
+        va_start(args, fmt);
 
-        std::clog << std::endl;
+        logGeneric(
+            3,          // Min verbosity lvl
+            stderr,     // Output stream
+            "\x1b[1;36mInfo\x1b[0m",    // Prefix
+            fmt,        // Format string
+            args        // Variadic arguments
+        );
+
+        va_end(args);
     }
 
-    void print_help() 
+    void logGeneric(
+        int minVerbosityLevel,
+        FILE *outputBuffer,
+        const char *prefix,
+        const char *fmt, 
+        va_list args)
     {
+        if (flags::verbosityLvl < minVerbosityLevel) 
+            return;
+
+        fprintf(outputBuffer, "%s: ", prefix);
+        vfprintf(outputBuffer, fmt, args);
+        putc('\n', outputBuffer);
+    }
+
+    void printHelp() 
+    {
+        // NOTE: I am not using a raw string here because of ANSI SGR
         std::clog <<
 
-"\033[1mlivefind [-Options] [Directories]\033[0m\n"
+"\x1b[1mlivefind [-Options] [Directories]\x1b[0m\n"
 "\n"
 "NOTE: Livefind recognizes flags as anything listed below, even if it is in a\n"
 "middle of a list of directories, and flags are also applied as encountered.\n"
 "As such, you should pass flags first to avoid strange behaviour, although\n"
 "you can do some cool stuff with this if you know what you are doing.\n"
 "\n"
-"\033[1mOptions\033[0m:\n"
+"\x1b[1mOptions\x1b[0m:\n"
 "    -v --verbosity\n"
 "        0 silent                      : Disable all output\n"
 "        1 error errors                : Print errors only\n"
-"        \033[4m2 warning warnings important\033[0m  : Print warnings & errors only\n"
+"        \x1b[4m2 warning warnings important\x1b[0m  : Print warnings & errors only\n"
 "        3 verbose all                 : Print warnings, errors & info\n"
 "\n"
 "    -f --force\n"
-"        \033[4m0 noforce\033[0m                     : Ask for risky actions\n"
+"        \x1b[4m0 noforce\x1b[0m                     : Ask for risky actions\n"
 "        1 cancel                      : Always cancel risky actions\n"
 "        2 continue allow              : Always allow risky actions\n"
 "\n"
 "    -d --depth --max-depth\n"
 "        [unsigned int]                : Max recursion depth\n"
-"        ( Default value: 1 )\n"
+"        ( Default value: 1 )\n\n"
 
         << std::flush;
     }
 }
 
 namespace utils {
-    bool try_push_dir(const std::string &dir, 
-                      std::vector<std::string> *target_vec) 
+    bool isPathOK(const std::filesystem::path &path)
     {
-        try {
-            if (!(fs::exists(dir) && fs::is_directory(dir))) {
-                log::warning("Nonexistent directory \"%s\"", dir.c_str());
-                return false;
-            }
+        std::error_code ec;
 
-            target_vec->push_back(dir);
-
+        if (std::filesystem::is_directory(path, ec))
             return true;
-        } catch (const fs::filesystem_error &e) {
-            log::error("( %s ) FILESYSTEM: %s", dir.c_str(), e.what());
-            return false;
-        }
+
+        if (ec)
+            log::warning("( %s ) FILESYSTEM: %s", path.c_str(), 
+                                                  ec.message().c_str());
+
+        return false;
     }
 
-    void trim_whitespace(std::string &str)
+    void strTrimWhitespace(std::string &str)
     {
-        size_t last_chr = str.find_last_not_of(" \t\n");
+        size_t lastNotWhitespace = str.find_last_not_of(" \t\n");
 
-        if (last_chr == std::string::npos) {
+        if (lastNotWhitespace == std::string::npos)
             str.clear();
-        } else {
-            str.erase(last_chr + 1);
+        else
+            str.resize(lastNotWhitespace + 1);
+    }
+
+    void strToLower(std::string &str)
+    {
+        if (str.size() == 0)
+            return;
+
+        char *c = &(str[0]);
+        while (*c) {
+            *c = std::tolower(*c);
+            c++;
         }
+
+        // I will just leave this here
+        // while (*(c++) = std::tolower(*c));
     }
 }
 
 namespace conversions {
-    std::vector<std::string> convert_args(int argc, char **argv)
+    std::vector<std::string> convertArgs(int argc, char **argv)
     {
-        std::vector<std::string> args(argc);
+        std::vector<std::string> args;
+        args.reserve(argc);
 
-        for (int i = 0; i < argc; i++) {
-            args[i] = argv[i];
-        }
+        for (int i = 0; i < argc; i++)
+            args.emplace_back(argv[i]);
 
         return args;
     }
 
-    int str_to_int(const std::string &in)
+    int tryStrToPositiveInt(const std::string &in, int &out)
     {
-        // IMPORTANT: THIS MUST ONLY BE USED INSIDE TRY/CATCH
+        for (const char &c : in) {
+            if (std::isdigit(c))
+                continue;
 
-        if (!std::regex_match(in, std::regex("^[0-9]+$"))) {
-            // This check is needed because stoi does not throw 
-            // an exception when it encouters a character that is 
-            // not numeric (for whatever reason); this also 
-            // discards negative numbers
-
-            if (in.at(0) == '-') {
-                throw std::out_of_range("Argument must be positive");
-            } else if (in.at(0) == '+') {
-                throw std::invalid_argument("You do not need to explicitly specify that a value is positive, you know");
-            }
-
-            throw std::invalid_argument("Argument must be numeric");
+            log::error("'%s' is not a positive integer!", in.c_str());
+            return 1;
         }
 
-        return std::stoi(in);
+        int result = 0;
+        int power = 1;
+
+        for (size_t i = 0; i < in.size(); i++) {
+            // Reading digits from the end
+            const char &digit = in[in.size() - i - 1];
+
+            int delta = (digit - '0') * power;
+
+            if (std::numeric_limits<int>::max() - delta < result) {
+                log::error("'%s' is too big!", in.c_str());
+                return 2;
+            }
+
+            result += delta;
+            power *= 10;
+        }
+
+        out = result;
+        return 0;
     }
 }
 
-namespace tui::components {
-    void draw_border(WINDOW *window_ptr, const std::string &title)
+namespace types {
+    Entry::Entry(std::string name) : 
+        name_(name),
+        item_(nullptr)
+    {}
+
+    Entry::Entry(const Entry &other) : 
+        name_(other.name()), 
+        item_(nullptr)
     {
-        static constexpr short TITLE_X_OFFSET = 2;
+        if (other.item_)
+            item_ = new_item(name_.c_str(), nullptr);
+    }
 
-        box(window_ptr, 0, 0);
+    Entry &Entry::operator=(const Entry &other)
+    {
+        if (this == &other)
+            return *this;
 
-        if (!title.empty()) {
-            wattron(window_ptr, A_REVERSE);
+        name_ = other.name();
 
-            mvwaddch(window_ptr, 0, TITLE_X_OFFSET, ' ');
-            mvwprintw(window_ptr, 0, TITLE_X_OFFSET + 1, 
-                      "%s", title.c_str());
-            mvwaddch(window_ptr, 0, TITLE_X_OFFSET + title.length() + 1, 
-                     ' ');
-
-            wattroff(window_ptr, A_REVERSE);
+        if (item_) {
+            free_item(item_);
+            item_ = nullptr;
         }
+
+        if (other.item_)
+            item_ = new_item(name_.c_str(), nullptr);
+
+        return *this;
     }
 
-    WINDOW *create_derwin(WINDOW *parent_win, 
-            int offset_h, int offset_w, 
-            int offset_y, int offset_x)
+    Entry::Entry(Entry &&other) noexcept : 
+        name_(std::move(other.name_)), 
+        item_(nullptr)
     {
-        int parent_h, parent_w;
-        getmaxyx(parent_win, parent_h, parent_w);
+        if (!other.item_)
+            return;
 
-        return derwin(
-            parent_win, 
-            parent_h - offset_h, parent_w - offset_w, 
-            offset_y, offset_x
-        );
+        free_item(other.item_);
+        other.item_ = nullptr;
+
+        item_ = new_item(name_.c_str(), nullptr);
     }
 
-    void destroy_window(WINDOW *window_ptr)
+    Entry &Entry::operator=(Entry &&other) noexcept
     {
-        wborder(window_ptr, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
-        wrefresh(window_ptr);
-        delwin(window_ptr);
+        if (this == &other)
+            return *this;
+
+        name_ = std::move(other.name_);
+
+        if (item_) {
+            free_item(item_);
+            item_ = nullptr;
+        }
+
+        if (other.item_) {
+            free_item(other.item_);
+            other.item_ = nullptr;
+
+            item_ = new_item(name_.c_str(), nullptr);
+        }
+
+        return *this;
     }
 
-    MENU *create_menu(WINDOW *parent_win, WINDOW *sub_win, ITEM **items)
+    Entry::~Entry()
     {
-        MENU *menu_ptr = new_menu(items);
-
-        int parent_h, parent_w;
-        getmaxyx(parent_win, parent_h, parent_w);
-
-        set_menu_win(menu_ptr, parent_win);
-        set_menu_sub(menu_ptr, sub_win);
-        set_menu_format(menu_ptr, parent_h-2, 1);
-        set_menu_mark(menu_ptr, " > ");
-
-        post_menu(menu_ptr);
-        return menu_ptr;
+        if (item_)
+            free_item(item_);
     }
 
-    void destroy_menu(MENU *menu_ptr)
+    const ITEM *Entry::initialize()
     {
-        unpost_menu(menu_ptr);
-        free_menu(menu_ptr);
-    }
-
-    FORM *create_form(WINDOW *parent_win, WINDOW *sub_win, FIELD **fields)
-    {
-        FORM *form_ptr = new_form(fields);
-
-        int parent_h, parent_w;
-        getmaxyx(parent_win, parent_h, parent_w);
-
-        set_form_win(form_ptr, parent_win);
-        set_form_sub(form_ptr, sub_win);
-
-        post_form(form_ptr);
-        return form_ptr;
-    }
-
-    void destroy_form(FORM *form_ptr)
-    {
-        unpost_form(form_ptr);
-        free_form(form_ptr);
+        assert(!item_ && "Tried to initialize a types::Entry twice!");
+        item_ = new_item(name_.c_str(), nullptr);
+        return item_;
     }
 }
 

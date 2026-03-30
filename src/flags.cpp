@@ -1,113 +1,128 @@
 #include "flags.hpp"
 #include "utils.hpp"
 
-#include <stdexcept>
 #include <string>
 #include <unordered_map>
 
 namespace flags {
-    const std::unordered_map<std::string, FlagType> flag_hashmap = {
-        { "-v", FlagType::VERBOSITY_LVL },
-        { "--verbosity", FlagType::VERBOSITY_LVL },
-        { "-d", FlagType::MAX_DEPTH },
-        { "--depth", FlagType::MAX_DEPTH },
-        { "--max-depth", FlagType::MAX_DEPTH },
-        { "-f", FlagType::FORCE_MODE },
-        { "--force", FlagType::FORCE_MODE },
-    };
+    int verbosityLvl = 2;
+    int maxDepth = 1;
+    int forceMode = 0;
 
-    const std::unordered_map<std::string, int> verbosity_args = {
-        { "0", 0 },
-        { "silent", 0 },
-        { "1", 1 },
-        { "error", 1 },
-        { "errors", 1 },
-        { "2", 2 },
-        { "warning", 2 },
-        { "warnings", 2 },
-        { "important", 2 },
-        { "3", 3 },
-        { "verbose", 3 },
-        { "all", 3 },
-    };
-
-    const std::unordered_map<std::string, int> force_mode_args = {
-        { "0", 0 },
-        { "noforce", 0 },
-        { "1", 1 },
-        { "cancel", 1 },
-        { "2", 2 },
-        { "continue", 2 },
-        { "allow", 2 },
-    };
-
-    int verbosity_lvl = 2;
-    int max_depth = 1;
-    int force_mode = 0;
-
-    void parse_flag(const FlagType flag, size_t &i, 
-                    int &argc, char **(&argv))
+    bool tryParseAsFlag(size_t &i, const std::vector<std::string> &args)
     {
-        std::string arg{argv[i]};
+        using parser_func_ptr 
+            = void (*)(size_t &, const std::vector<std::string> &);
 
-        switch (flag) {
-            case FlagType::VERBOSITY_LVL:
-                if (i + 1 >= argc) {
-                    log::warning("No argument provided after %s, ignoring", 
-                                  arg.c_str());
-                    break;
-                }
+        static std::unordered_map<std::string, parser_func_ptr> 
+        flagParsers = {
+            { "-v",             parseVerbosityLvl },
+            { "--verbosity",    parseVerbosityLvl },
 
-                arg = argv[++i];
+            { "-d",             parseMaxDepth },
+            { "--depth",        parseMaxDepth },
+            { "--max-depth",    parseMaxDepth },
 
-                if (verbosity_args.find(arg) == verbosity_args.end()) {
-                    log::warning("Invalid argument \"%s\" to -v, ignoring", 
-                                    arg.c_str());
-                    break;
-                }
+            { "-f",             parseForceMode },
+            { "--force",        parseForceMode },
+        };
 
-                flags::verbosity_lvl = verbosity_args.at(arg);
-                break;
+        if (flagParsers.find(args[i]) == flagParsers.end())
+            return false;
 
-            case FlagType::MAX_DEPTH:
-                if (i + 1 >= argc) {
-                    log::warning("No argument provided after %s, ignoring", 
-                                  arg.c_str());
-                    break;
-                }
+        flagParsers[args[i]](i, args);
+        return true;
+    }
 
-                arg = argv[++i];
+    void parseVerbosityLvl(size_t &i, const std::vector<std::string> &args)
+    {
+        static std::unordered_map<std::string, int> verbosityArgs = {
+            { "0",          0 },
+            { "silent",     0 },
 
-                try {
-                    flags::max_depth = conversions::str_to_int(arg);
-                } catch (const std::invalid_argument &e) {
-                    log::warning("Invalid argument \"%s\" to -d, ignoring (%s)", 
-                                arg.c_str(), e.what());
-                } catch (const std::out_of_range &e) {
-                    log::warning("Invalid argument \"%s\" to -d, ignoring (%s)", 
-                                arg.c_str(), e.what());
-                }
+            { "1",          1 },
+            { "error",      1 },
+            { "errors",     1 },
 
-                break;
+            { "2",          2 },
+            { "warning",    2 },
+            { "warnings",   2 },
+            { "important",  2 },
 
-            case FlagType::FORCE_MODE:
-                if (i + 1 >= argc) {
-                    log::warning("No argument provided after %s, ignoring", 
-                                  arg.c_str());
-                    break;
-                }
+            { "3",          3 },
+            { "verbose",    3 },
+            { "all",        3 },
+        };
 
-                arg = argv[++i];
+        const std::string &arg = args[i];
 
-                if (force_mode_args.find(arg) == force_mode_args.end()) {
-                    log::warning("Invalid argument \"%s\" to -f, ignoring", 
-                                    arg.c_str());
-                    break;
-                }
-
-                flags::force_mode = force_mode_args.at(arg);
-                break;
+        if (i + 1 >= args.size()) {
+            log::warning("No argument provided after '%s', ignoring", 
+                         arg.c_str());
+            return;
         }
+
+        const std::string &value = args[++i];
+
+        if (!verbosityArgs.contains(value)) {
+            log::warning("Invalid argument '%s' to '%s', ignoring", 
+                         value.c_str(), arg.c_str());
+            return;
+        }
+
+        flags::verbosityLvl = verbosityArgs[value];
+    }
+
+    void parseMaxDepth(size_t &i, const std::vector<std::string> &args)
+    {
+        const std::string &arg = args[i];
+
+        if (i + 1 >= args.size()) {
+            log::warning("No argument provided after '%s', ignoring", 
+                         arg.c_str());
+            return;
+        }
+
+        const std::string &value = args[++i];
+
+        if (conversions::tryStrToPositiveInt(value, flags::maxDepth) == 0)
+            return;
+
+        log::warning("Invalid argument '%s' to '%s', ignoring", value.c_str(), 
+                                                                arg.c_str());
+    }
+
+    void parseForceMode(size_t &i, const std::vector<std::string> &args)
+    {
+        static std::unordered_map<std::string, int> forceModeArgs = {
+            { "0",          0 },
+            { "noforce",    0 },
+
+            { "1",          1 },
+            { "cancel",     1 },
+
+            { "2",          2 },
+            { "continue",   2 },
+            { "allow",      2 },
+        };
+
+        const std::string &arg = args[i];
+
+        if (i + 1 >= args.size()) {
+            log::warning("No argument provided after '%s', ignoring", 
+                          arg.c_str());
+            return;
+        }
+
+        const std::string &value = args[++i];
+
+        if (!forceModeArgs.contains(value)) {
+            log::warning("Invalid argument '%s' to '%s', ignoring", 
+                         value.c_str(), arg.c_str());
+            return;
+        }
+
+        flags::forceMode = forceModeArgs[value];
     }
 }
 
