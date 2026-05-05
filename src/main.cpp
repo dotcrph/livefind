@@ -61,11 +61,17 @@ bool tryCacheDirectoryTree(const std::string &path, const bool proceedOnError)
     if (!utils::isPathOK(path)) {
         log::warning("'%s' is not a valid directory", path.c_str());
 
-        if (proceedOnError)
-            log::warning("Failed to add \"%s\" to index, ignoring", 
-                         path.c_str());
-        else
-            log::error("Failed to add \"%s\" to index", path.c_str());
+        if (proceedOnError) {
+            log::warning(
+                "Failed to add \"%s\" to index, ignoring", 
+                path.c_str()
+            );
+        } else {
+            log::error(
+                "Failed to add \"%s\" to index", 
+                path.c_str()
+            );
+        }
 
         return proceedOnError;
     }
@@ -82,8 +88,7 @@ bool tryCacheDirectoryTree(const std::string &path, const bool proceedOnError)
     std::clog << "Something went wrong while iterating through directories. Do you wish to continue? (y/\033[4mn\033[0m)"
               << std::endl;
 
-    // Reading this as string just in case the user was to type 
-    // anything other than 'y' or 'yes' that also starts with 'y'
+    // Reading this as string just in case
     std::string input;
     std::getline(std::cin, input);
 
@@ -96,7 +101,7 @@ bool tryCacheDirectoryTree(const std::string &path, const bool proceedOnError)
 bool tryIterateDirs(const fs::path &path)
 {
     fs::recursive_directory_iterator iterator(path);
-    fs::recursive_directory_iterator end;
+    fs::recursive_directory_iterator end; // Default constructed
     std::error_code ec;
 
     while (iterator != end) {
@@ -104,8 +109,11 @@ bool tryIterateDirs(const fs::path &path)
             iterator.pop(ec);
 
             if (ec) {
-                log::error("Failed to pop recursive_directory_iterator, breaking the loop (%s)",
-                           ec.message().c_str());
+                log::error(
+                    "Failed to pop recursive_directory_iterator, breaking the loop (%s)",
+                    ec.message().c_str()
+                );
+
                 return false;
             }
 
@@ -121,8 +129,11 @@ bool tryIterateDirs(const fs::path &path)
         iterator.increment(ec);
 
         if (ec) {
-            log::error("Failed to increment recursive_directory_iterator, breaking the loop (%s)",
-                          ec.message().c_str());
+            log::error(
+                "Failed to increment recursive_directory_iterator, breaking the loop (%s)",
+                ec.message().c_str()
+            );
+
             return false;
         }
     }
