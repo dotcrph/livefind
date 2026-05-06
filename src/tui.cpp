@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstring>
+
+#include <vector>
 #include <string>
 
 #include <ncurses.h>
@@ -26,12 +28,16 @@ namespace tui {
     FORM *inputForm;
     FIELD *inputFields[2];
 
-    std::vector<types::Entry> entriesCache; 
+    ITEM **entriesCache; 
     /// Description:
-    ///     A vector with types::Entry objects generated in createEntry(). 
-    ///     This should not be changed after calling initializeEntries(), 
-    ///     as it is assumed by the program that the size of entries array 
-    ///     is equal to entriesCache.size() + 1!
+    ///     A vector with ITEM *s created in initializeEntries(). 
+    ///     This should not be reassigned after initialization, as 
+    ///     it is assumed by the program that the size of entries 
+    ///     array is equal to entriesCacheSize + 1!
+
+    size_t entriesCacheSize;
+    /// Description:
+    ///     Number of elements in entriesCache
 
     ITEM **entries; 
     /// Description:
@@ -40,9 +46,9 @@ namespace tui {
     ///     nullptr required by ncurses library). Regenerated in 
     ///     updateEntries().
 
-    std::string run()
+    std::string run(std::vector<std::string> paths)
     {
-        if (entriesCache.empty()) {
+        if (paths.empty()) {
             log::warning("No paths provided!");
             return "";
         }
@@ -51,7 +57,7 @@ namespace tui {
             return "";
         }
 
-        initializeEntries();
+        initializeEntries(paths);
 
         noecho();
         cbreak();
@@ -114,6 +120,11 @@ namespace tui {
 
         delete[] entries;
 
+        for (size_t i = 0; i < entriesCacheSize; i++)
+            free_item(entriesCache[i]);
+
+        delete[] entriesCache;
+
         // Input form
         components::destroyForm(inputForm);
 
@@ -130,26 +141,23 @@ namespace tui {
         fclose(ttyFile);
     }
 
-    void createEntry(const std::string &name)
+    void initializeEntries(const std::vector<std::string> &paths)
     {
-        log::verbose("Adding entry '%s'", name.c_str());
-        entriesCache.emplace_back(name);
-    }
+        log::verbose("Total directories scanned: %d", paths.size());
 
-    void initializeEntries()
-    {
-        log::verbose("Total directories scanned: %d", entriesCache.size());
+        entriesCacheSize = paths.size();
+        entriesCache = new ITEM * [entriesCacheSize];
 
-        for (auto &entry : entriesCache)
-            entry.initialize();
+        for (size_t i = 0; i < entriesCacheSize; i++)
+            entriesCache[i] = new_item(paths[i].c_str(), nullptr);
 
         // +1 for a sentinel nullptr required by ncurses
-        entries = new ITEM * [entriesCache.size() + 1];
+        entries = new ITEM * [entriesCacheSize + 1];
 
-        for (size_t i = 0; i < entriesCache.size(); i++)
-            entries[i] = entriesCache[i].item();
+        for (size_t i = 0; i < entriesCacheSize; i++)
+            entries[i] = entriesCache[i];
 
-        entries[entriesCache.size()] = nullptr;
+        entries[entriesCacheSize] = nullptr;
     }
 
     void updateEntries(const std::string &searchString)
@@ -158,13 +166,14 @@ namespace tui {
         werase(entriesWindow);
 
         ITEM **nextFree = entries;
-        for (size_t i = 0; i < entriesCache.size(); i++) {
-            types::Entry &entry = entriesCache[i];
+        for (size_t i = 0; i < entriesCacheSize; i++) {
+            ITEM *item = entriesCache[i];
+            const char *name = item_name(item);
 
-            if (entry.name().find(searchString) == std::string::npos)
+            if (!strstr(name, searchString.c_str()))
                 continue;
 
-            *nextFree = entry.item();
+            *nextFree = item;
             nextFree++;
         }
 

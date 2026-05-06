@@ -5,10 +5,11 @@
 #include <cstdio>
 #include <cstdarg>
 
+#include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <limits>
 #include <string>
-#include <utility>
 #include <vector>
 #include <filesystem>
 
@@ -197,87 +198,6 @@ namespace conversions {
 
         out = result;
         return 0;
-    }
-}
-
-namespace types {
-    Entry::Entry(std::string name) : 
-        name_(name),
-        item_(nullptr)
-    {}
-
-    Entry::Entry(const Entry &other) : 
-        name_(other.name()), 
-        item_(nullptr)
-    {
-        if (other.item_)
-            item_ = new_item(name_.c_str(), nullptr);
-    }
-
-    Entry &Entry::operator=(const Entry &other)
-    {
-        if (this == &other)
-            return *this;
-
-        name_ = other.name();
-
-        if (item_) {
-            free_item(item_);
-            item_ = nullptr;
-        }
-
-        if (other.item_)
-            item_ = new_item(name_.c_str(), nullptr);
-
-        return *this;
-    }
-
-    Entry::Entry(Entry &&other) noexcept : 
-        name_(std::move(other.name_)), 
-        item_(nullptr)
-    {
-        if (!other.item_)
-            return;
-
-        free_item(other.item_);
-        other.item_ = nullptr;
-
-        item_ = new_item(name_.c_str(), nullptr);
-    }
-
-    Entry &Entry::operator=(Entry &&other) noexcept
-    {
-        if (this == &other)
-            return *this;
-
-        name_ = std::move(other.name_);
-
-        if (item_) {
-            free_item(item_);
-            item_ = nullptr;
-        }
-
-        if (other.item_) {
-            free_item(other.item_);
-            other.item_ = nullptr;
-
-            item_ = new_item(name_.c_str(), nullptr);
-        }
-
-        return *this;
-    }
-
-    Entry::~Entry()
-    {
-        if (item_)
-            free_item(item_);
-    }
-
-    const ITEM *Entry::initialize()
-    {
-        assert(!item_ && "Tried to initialize a types::Entry twice!");
-        item_ = new_item(name_.c_str(), nullptr);
-        return item_;
     }
 }
 

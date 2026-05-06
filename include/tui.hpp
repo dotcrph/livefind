@@ -1,13 +1,14 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace tui {
-    std::string run();
+    std::string run(std::vector<std::string> paths);
     /// Description:
-    ///     Starts the TUI application, including initializing ITEM pointers, 
-    ///     opening dev/tty, setting up ncurses screen, capturing input and 
-    ///     rendering things.
+    ///     Starts the TUI application, including initializing ITEM pointers 
+    ///     from the given paths list, opening dev/tty, setting up ncurses 
+    ///     screen, capturing input and rendering things.
     ///
     /// Returns:
     ///     A string that the user has selected
@@ -18,25 +19,19 @@ namespace tui {
     ///     releases ncurses widgets (entriesMenu/Window, inputForm/Fields/
     ///     Window). Also closes /dev/tty.
 
-    void createEntry(const std::string &name);
+    void initializeEntries(const std::vector<std::string> &paths);
     /// Description:
-    ///     Creates a types::Entry object in entriesCache from a given name 
-    ///     string. This exists to separate tui implementation from other 
-    ///     parts of the program and to not expose entriesCache.
-
-    void initializeEntries();
-    /// Description:
-    ///     Calls types::Entry::initialize() for every object in entriesCache. 
-    ///     Then, allocates entries array with size of entriesCache.size() + 1 
-    ///     and copies ITEM *s from objects in entriesCache to this array,
-    ///     adding a nullptr at the end.
+    ///     Allocates entriesCache with the same size as paths list and 
+    ///     creates ITEM *s. Then, allocates entries array with size of 
+    ///     entriesCacheSize + 1 and copies all ITEM *s in entriesCache 
+    ///     to this array, adding a nullptr at the end.
 
     void updateEntries(const std::string &searchString);
     /// Description:
-    ///     Iterates through each object in entriesCache, checking if it has 
-    ///     searchString as a substring in its name string member. If that is 
-    ///     the case, adds this object's item member to entries array. When 
-    ///     finished, creates a nullptr after the very last added element.
+    ///     Iterates through each ITEM * in entriesCache, checking if it has 
+    ///     searchString as a substring in its name. If that is the case, it 
+    ///     adds this object's item member to entries array. When finished, 
+    ///     creates a nullptr after the very last added element.
 
     bool tryOpenTty();
     /// Description:

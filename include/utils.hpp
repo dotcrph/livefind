@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <string>
 #include <vector>
 #include <filesystem>
@@ -86,40 +87,5 @@ namespace conversions {
     {
         return ch & 0x1f;
     }
-}
-
-namespace types {
-    class Entry final
-    /// Description:
-    ///     A class that contains a single ncurses' ITEM pointer with 
-    ///     associated metadata (currently only displayed string) and 
-    ///     automatically manages this ITEM's lifetime. This class is 
-    ///     necessary because ncurses' new_item() does not copy its 
-    ///     arguments.
-    {
-    private:
-        std::string name_;
-        ITEM *item_;
-
-    public:
-        Entry(std::string name);
-        Entry(const Entry &other);
-        Entry &operator=(const Entry &other);
-        Entry(Entry &&other) noexcept;
-        Entry &operator=(Entry &&other) noexcept;
-        ~Entry();
-
-        const std::string &name() const { return name_; }
-        ITEM *item() { return item_; }
-
-        const ITEM *initialize();
-        /// Description:
-        ///     Calls ncurses' new_item with name_.c_str() and nullptr as 
-        ///     arguments. Should only be used once as it does not release 
-        ///     previously allocated memory!
-        ///
-        /// Returns:
-        ///     An ITEM * to allocated item.
-    };
 }
 

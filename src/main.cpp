@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include <filesystem>
+#include <string>
 #include <vector>
 #include <iostream>
 
@@ -13,12 +14,14 @@
 
 namespace fs = std::filesystem;
 
+std::vector<std::string> paths;
+
 int main(int argc, char *argv[])
 {
     if (!tryParseArgs(argc, argv))
         return EXIT_FAILURE;
 
-    std::string path = tui::run();
+    std::string path = tui::run(std::move(paths));
 
     if (path.empty())
         return EXIT_FAILURE;
@@ -76,7 +79,7 @@ bool tryCacheDirectoryTree(const std::string &path, const bool proceedOnError)
         return proceedOnError;
     }
 
-    tui::createEntry(path);
+    paths.push_back(path);
 
     if (tryIterateDirs(path)) 
         return true;
@@ -124,7 +127,7 @@ bool tryIterateDirs(const fs::path &path)
         std::string pathStr = path.string();
 
         if (utils::isPathOK(path))
-            tui::createEntry(pathStr);
+            paths.push_back(pathStr);
 
         iterator.increment(ec);
 
